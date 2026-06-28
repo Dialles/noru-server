@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Envia os segredos de produção para o Cloudflare Pages (wrangler pages secret put).
+# Envia os segredos de produção para o Cloudflare Workers (wrangler secret put).
 # Valores lidos de (nesta ordem): variáveis de ambiente, .prod.vars, .dev.vars.
 # Segredos enviados: SETUP_TOKEN, HASH_SALT.
 source "$(dirname "$0")/_common.sh"
@@ -22,7 +22,7 @@ _load_if_unset .dev.vars
 
 SECRET_NAMES="SETUP_TOKEN HASH_SALT"
 
-step "Segredos do Pages · projeto '$PROJECT_NAME'"
+step "Segredos do Worker · projeto '$PROJECT_NAME'"
 warn "As variáveis NÃO-secretas (PUBLIC_*, SESSION_*, ALLOWED_ORIGINS) ficam em [vars] no wrangler.toml ou no painel."
 
 for name in $SECRET_NAMES; do
@@ -32,7 +32,7 @@ for name in $SECRET_NAMES; do
     continue
   fi
   info "Enviando $name…"
-  if printf '%s' "$value" | run_wrangler pages secret put "$name" --project-name="$PROJECT_NAME"; then
+  if printf '%s' "$value" | run_wrangler secret put "$name"; then
     ok "$name configurado."
   else
     die "Falha ao enviar $name. Você fez login? (npx wrangler login)"

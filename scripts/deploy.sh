@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy de produção no Cloudflare Pages:
+# Deploy de produção no Cloudflare Workers:
 #   1. typecheck   2. valida database_id   3. migrations remotas   4. deploy
 # Use --skip-typecheck ou --skip-migrate se necessário.
 source "$(dirname "$0")/_common.sh"
@@ -40,8 +40,8 @@ else
   ok "Migrations aplicadas no remoto."
 fi
 
-step "4/4 · Deploy Pages"
-run_wrangler pages deploy "$PUBLIC_DIR" --project-name="$PROJECT_NAME"
+step "4/4 · Deploy Worker"
+run_wrangler deploy
 
 echo
 ok "Deploy concluído."

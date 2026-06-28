@@ -1,8 +1,8 @@
 # Scripts de operação — NORU Reviews
 
 Automação para preparar, rodar e publicar o servidor na infraestrutura Cloudflare
-(Pages + Functions + D1). Todos os scripts são idempotentes quando faz sentido e
-aceitam configuração por variáveis de ambiente.
+(Workers com static assets + D1). Todos os scripts são idempotentes quando faz
+sentido e aceitam configuração por variáveis de ambiente.
 
 ## Uso rápido (via npm)
 
@@ -16,14 +16,14 @@ aceitam configuração por variáveis de ambiente.
 | `npm run db:migrate` | Aplica as migrations locais. |
 | `npm run db:migrate:remote` | Aplica as migrations no D1 remoto. |
 | `npm run db:reset` | Zera a database **local** e reaplica as migrations. |
-| `npm run secrets` | Envia `SETUP_TOKEN`/`HASH_SALT` como secrets do Pages. |
+| `npm run secrets` | Envia `SETUP_TOKEN`/`HASH_SALT` como secrets do Worker. |
 | `npm run smoke` | Smoke test da API (`/api/health`, config, páginas). |
 | `npm run deploy` | Typecheck → valida `database_id` → migrations remotas → deploy. |
 
 ## Detalhes por script
 
 - **`scripts/setup.sh`** — ponto de partida. Não sobrescreve `.dev.vars` existente.
-- **`scripts/dev.sh`** — aplica migrations locais na primeira execução e roda `wrangler pages dev`.
+- **`scripts/dev.sh`** — aplica migrations locais na primeira execução e roda `wrangler dev`.
 - **`scripts/db-create.sh`** — usa `wrangler d1 list --json` para obter o `uuid` e atualiza o `wrangler.toml`.
 - **`scripts/db-migrate.sh [local|remote]`** — bloqueia o remoto se o `database_id` ainda for placeholder.
 - **`scripts/db-reset.sh`** — remove `.wrangler/state/v3/d1` (apenas local) e remigra.
@@ -38,9 +38,9 @@ aceitam configuração por variáveis de ambiente.
 | Variável | Padrão | Uso |
 | --- | --- | --- |
 | `NORU_DB_NAME` | `noru_reviews` | Nome da database D1. |
-| `NORU_PROJECT_NAME` | `noru-reviews` | Nome do projeto Pages. |
+| `NORU_PROJECT_NAME` | `noru-reviews` | Nome do projeto/Worker. |
 | `NORU_COMPAT_DATE` | `2026-06-28` | `compatibility_date` do dev local. |
-| `NORU_DEV_PORT` | `8788` | Porta do `wrangler pages dev`. |
+| `NORU_DEV_PORT` | `8788` | Porta do `wrangler dev`. |
 | `WRANGLER_BIN` | `npx wrangler` | Como invocar o Wrangler. |
 
 ## Exemplos

@@ -1,5 +1,6 @@
 export interface Env {
   DB: D1Database;
+  ASSETS: Fetcher;
   SETUP_TOKEN?: string;
   HASH_SALT?: string;
   PUBLIC_TENANT_SLUG?: string;

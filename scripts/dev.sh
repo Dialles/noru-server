@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sobe o ambiente local (Cloudflare Pages + Functions + D1) com checagens prévias.
+# Sobe o ambiente local (Cloudflare Worker + static assets + D1) com checagens prévias.
 source "$(dirname "$0")/_common.sh"
 
 require_wrangler
@@ -16,4 +16,4 @@ fi
 
 step "Servidor local em http://localhost:${DEV_PORT}"
 log "Cliente: http://localhost:${DEV_PORT}/client/   ·   Admin: http://localhost:${DEV_PORT}/admin/"
-exec $WRANGLER_BIN pages dev "$PUBLIC_DIR" --compatibility-date="$COMPAT_DATE" --port "$DEV_PORT"
+exec $WRANGLER_BIN dev --port "$DEV_PORT"

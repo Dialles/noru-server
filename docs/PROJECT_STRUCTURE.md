@@ -2,10 +2,8 @@
 
 ```txt
 noru-reviews-cloudflare/
-├── functions/
-│   └── api/
-│       └── [[path]].ts              # Entrada das Cloudflare Pages Functions
 ├── src/
+│   ├── worker.ts                    # Entrada do Worker: serve public/ e roteia /api/*
 │   └── server/
 │       ├── app.ts                   # Rotas HTTP e regras de negócio
 │       ├── auth.ts                  # Login, sessão e cookies HttpOnly
@@ -37,14 +35,13 @@ noru-reviews-cloudflare/
 │   │   └── js/app.js                # Integração com API pública
 │   ├── assets/                      # Assets públicos (logo, favicon.svg)
 │   ├── site.webmanifest             # PWA / ícones
-│   ├── _headers                     # Headers estáticos do Pages (CSP, cache)
-│   ├── _redirects                   # Rotas estáticas amigáveis
-│   └── _routes.json                 # Functions só em /api/*
+│   ├── _headers                     # Headers dos estáticos (CSP, cache)
+│   └── _redirects                   # Rotas estáticas amigáveis
 ├── docs/
 │   ├── API.md                       # Contrato da API
 │   ├── DEPLOY_CLOUDFLARE.md         # Deploy Cloudflare
 │   └── PROJECT_STRUCTURE.md         # Esta árvore
-├── .github/workflows/deploy.yml     # CI/CD (deploy automático no Pages)
+├── .github/workflows/ci.yml         # CI (typecheck; deploy é via Workers Builds)
 ├── wrangler.toml                    # Configuração Cloudflare
 ├── package.json                     # Scripts do projeto
 ├── tsconfig.json                    # TypeScript
@@ -56,6 +53,6 @@ noru-reviews-cloudflare/
 ## Separação principal
 
 - `public/` contém somente arquivos servidos ao navegador; integrações ficam em `public/**/js/app.js`.
-- `functions/api/` expõe a API em `/api/*`.
+- `src/worker.ts` serve os estáticos (binding ASSETS) e expõe a API em `/api/*`.
 - `src/server/` concentra autenticação, validações e acesso ao D1.
 - `migrations/` define o banco versionado.

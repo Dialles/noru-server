@@ -70,7 +70,7 @@ async function health(request: Request, env: Env): Promise<Response> {
   return json({
     ok,
     service: 'noru-reviews-api',
-    runtime: 'cloudflare-pages-functions',
+    runtime: 'cloudflare-workers',
     database,
     timestamp: new Date().toISOString(),
   }, ok ? 200 : 503, request, env);

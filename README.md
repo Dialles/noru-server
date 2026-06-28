@@ -7,20 +7,20 @@ Servidor serverless para captação de feedback interno e direcionamento de clie
 ```txt
 Cliente no QR Code
       ↓
-Cloudflare Pages
+Cloudflare Worker  ──→  static assets (public/)
       ↓
-Pages Functions em /api/*
+/api/*  →  src/worker.ts → src/server/app.ts
       ↓
 Cloudflare D1
 ```
 
-Não existe servidor local em produção. O projeto roda em infraestrutura gratuita da Cloudflare usando Pages, Functions e D1.
+Não existe servidor local em produção. O projeto roda em infraestrutura gratuita da Cloudflare usando Workers (com static assets) e D1.
 
 ## Módulos
 
 - `public/client`: página pública do cliente integrada a `/api/feedback`.
 - `public/admin`: painel admin integrado a login, dashboard, lista de reviews, detalhe, status, configurações e QR.
-- `functions/api`: entrada da API Cloudflare.
+- `src/worker.ts`: entrada do Worker — serve `public/` e roteia `/api/*`.
 - `src/server`: servidor, autenticação, validação e regras de negócio.
 - `migrations`: schema do banco D1.
 - `docs`: documentação técnica.
@@ -67,14 +67,16 @@ de sessão. O primeiro admin também pode ser criado pelo painel em `/admin`.
 
 ## Deploy
 
-Recomendado: conectar o repositório ao **Cloudflare Pages** (Connect to Git),
-que faz build e deploy automático a cada push em `main`. Build output: `public`.
-Passo a passo (binding do D1, variáveis e segredos): `docs/DEPLOY_CLOUDFLARE.md`.
+Recomendado: conectar o repositório ao **Cloudflare Workers** (Connect to Git),
+que faz build e deploy automático (`npx wrangler deploy`) a cada push em `main`.
+Antes do primeiro deploy é preciso criar o D1 e colar o `database_id` no
+`wrangler.toml`. Passo a passo (binding do D1, variáveis e segredos):
+`docs/DEPLOY_CLOUDFLARE.md`.
 
 Alternativa via CLI:
 
 ```bash
-npm run secrets          # envia SETUP_TOKEN e HASH_SALT como secrets do Pages
+npm run secrets          # envia SETUP_TOKEN e HASH_SALT como secrets do Worker
 npm run deploy           # typecheck → migrations remotas → deploy
 ```
 

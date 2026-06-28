@@ -1,9 +1,16 @@
 name = "noru-reviews"
+main = "src/worker.ts"
 compatibility_date = "2026-06-28"
-pages_build_output_dir = "public"
 
-# O database_id é preenchido automaticamente por `npm run db:create`
-# (ou `npm run setup`). Em dev local o valor placeholder é ignorado.
+# Arquivos estáticos de public/ servidos pelo binding ASSETS.
+# /api/* é tratado pelo Worker (src/worker.ts → src/server/app.ts).
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# Crie o banco com `npm run db:create` e cole o database_id aqui.
+# O database_id NÃO é segredo — pode (e deve) ser versionado.
+# É obrigatório para o deploy do Worker encontrar o D1.
 [[d1_databases]]
 binding = "DB"
 database_name = "noru_reviews"

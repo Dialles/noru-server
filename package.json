@@ -4,12 +4,12 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "scripts": {
     "setup": "bash scripts/setup.sh",
     "dev": "bash scripts/dev.sh",
-    "dev:raw": "wrangler pages dev public --compatibility-date=2026-06-28",
+    "dev:raw": "wrangler dev",
     "db:create": "bash scripts/db-create.sh",
     "db:migrate": "bash scripts/db-migrate.sh local",
     "db:migrate:local": "wrangler d1 migrations apply noru_reviews --local",
@@ -20,7 +20,7 @@
     "create-admin": "bash scripts/create-admin.sh",
     "smoke": "bash scripts/smoke.sh",
     "deploy": "bash scripts/deploy.sh",
-    "deploy:raw": "wrangler pages deploy public --project-name=noru-reviews",
+    "deploy:raw": "wrangler deploy",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

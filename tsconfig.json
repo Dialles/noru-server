@@ -11,5 +11,5 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["functions/**/*.ts", "src/**/*.ts"]
+  "include": ["src/**/*.ts"]
 }
