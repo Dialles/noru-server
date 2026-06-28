@@ -1,5 +1,5 @@
-# Headers estáticos do Cloudflare Pages.
-# As respostas de /api/* são geradas pelas Functions e definem os próprios headers.
+# Headers aplicados às respostas de assets estáticos pelo Cloudflare Workers.
+# As respostas de /api/* são geradas pelo Worker (src/server/http.ts) e definem os próprios headers.
 
 /*
   X-Frame-Options: DENY
