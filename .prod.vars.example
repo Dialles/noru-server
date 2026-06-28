@@ -1,4 +1,4 @@
-# Segredos de PRODUÇÃO usados por `npm run secrets` (wrangler pages secret put).
+# Segredos de PRODUÇÃO usados por `npm run secrets` (wrangler secret put).
 # Copie para .prod.vars, preencha com valores fortes e NÃO versione o arquivo.
 # Gere valores com: openssl rand -hex 32
 
@@ -6,4 +6,4 @@ SETUP_TOKEN=
 HASH_SALT=
 
 # Variáveis não-secretas (PUBLIC_*, SESSION_*, ALLOWED_ORIGINS) ficam em
-# [vars] no wrangler.toml ou no painel Cloudflare > Pages > Settings.
+# [vars] no wrangler.toml ou no painel Cloudflare > Workers > Settings.
