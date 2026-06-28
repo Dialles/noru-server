@@ -1,4 +1,4 @@
-name = "noru-reviews"
+name = "noru-server"
 main = "src/worker.ts"
 compatibility_date = "2026-06-28"
 
