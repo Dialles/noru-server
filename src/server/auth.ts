@@ -1,6 +1,6 @@
 import type { AdminContext, Env } from './types';
 import { buildSessionCookie, clearSessionCookie, getCookie, HttpError, sessionCookieName } from './http';
-import { randomToken, sha256Base64Url, verifyPassword } from './crypto';
+import { DUMMY_PASSWORD_HASH, randomToken, sha256Base64Url, verifyPassword } from './crypto';
 
 export async function requireAdmin(request: Request, env: Env): Promise<AdminContext> {
   const token = getCookie(request, sessionCookieName(env));
@@ -54,13 +54,17 @@ export async function loginAdmin(env: Env, email: string, password: string): Pro
     LIMIT 1
   `).bind(email).first<{ id: string; tenant_id: string; email: string; name: string; role: string; password_hash: string }>();
 
-  if (!admin || !(await verifyPassword(password, admin.password_hash))) {
+  // Sempre executa o PBKDF2 (contra um hash descartável quando o e-mail não
+  // existe) para que o tempo de resposta não revele se a conta existe.
+  const passwordOk = await verifyPassword(password, admin?.password_hash || DUMMY_PASSWORD_HASH);
+  if (!admin || !passwordOk) {
     throw new HttpError(401, 'invalid_credentials', 'E-mail ou senha inválidos.');
   }
 
   const token = randomToken(32);
   const tokenHash = await sha256Base64Url(token);
-  const days = Number(env.ADMIN_SESSION_DAYS || '7');
+  const parsedDays = Number(env.ADMIN_SESSION_DAYS);
+  const days = Number.isFinite(parsedDays) && parsedDays > 0 ? parsedDays : 7;
   const expiresAt = new Date(Date.now() + Math.max(1, Math.min(days, 30)) * 24 * 60 * 60 * 1000).toISOString();
   const now = new Date().toISOString();
   const sessionId = crypto.randomUUID();

@@ -1,5 +1,9 @@
 const textEncoder = new TextEncoder();
 
+// Hash PBKDF2 descartável usado para gastar o mesmo tempo de CPU quando o
+// e-mail não existe, evitando enumeração de contas por timing no login.
+export const DUMMY_PASSWORD_HASH = 'pbkdf2-sha256:50000:LpeBIyWxXUWSsIIWEhqvug:TpUAB_dvarjExbZCSTDX6auIjC_tcm8M0_Z6tFhUlgU';
+
 export function randomToken(byteLength = 32): string {
   const bytes = new Uint8Array(byteLength);
   crypto.getRandomValues(bytes);
@@ -38,6 +42,17 @@ async function pbkdf2(password: string, salt: Uint8Array, iterations: number): P
   const key = await crypto.subtle.importKey('raw', textEncoder.encode(password), 'PBKDF2', false, ['deriveBits']);
   const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: salt as BufferSource, iterations }, key, 256);
   return new Uint8Array(bits);
+}
+
+// Compara dois segredos textuais em tempo constante. Faz hash de ambos para
+// um comprimento fixo (32 bytes) antes de comparar, então o tempo não vaza o
+// tamanho nem o conteúdo do segredo esperado.
+export async function timingSafeEqualString(a: string, b: string): Promise<boolean> {
+  const [da, db] = await Promise.all([
+    crypto.subtle.digest('SHA-256', textEncoder.encode(a)),
+    crypto.subtle.digest('SHA-256', textEncoder.encode(b)),
+  ]);
+  return timingSafeEqual(new Uint8Array(da), new Uint8Array(db));
 }
 
 function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
