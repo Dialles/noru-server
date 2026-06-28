@@ -12,7 +12,9 @@ export async function sha256Base64Url(value: string): Promise<string> {
 }
 
 export async function hashPassword(password: string): Promise<string> {
-  const iterations = 120_000;
+  // 50k iterações: equilíbrio entre segurança e o limite de CPU do Worker
+  // (free ~10ms). PBKDF2 com 120k estourava o limite e quebrava o setup.
+  const iterations = 50_000;
   const salt = new Uint8Array(16);
   crypto.getRandomValues(salt);
   const hash = await pbkdf2(password, salt, iterations);
@@ -24,7 +26,7 @@ export async function verifyPassword(password: string, stored: string): Promise<
   if (algorithm !== 'pbkdf2-sha256' || !iterationsText || !saltText || !hashText) return false;
 
   const iterations = Number(iterationsText);
-  if (!Number.isInteger(iterations) || iterations < 50_000) return false;
+  if (!Number.isInteger(iterations) || iterations < 10_000) return false;
 
   const salt = base64UrlToBytes(saltText);
   const expected = base64UrlToBytes(hashText);
