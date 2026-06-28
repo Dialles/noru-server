@@ -29,21 +29,21 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
     const url = new URL(request.url);
     const path = normalizePath(url.pathname);
 
-    if (path === '/health') return health(request, env);
-    if (path === '/feedback/config') return feedbackConfig(request, env);
-    if (path === '/feedback') return submitFeedback(request, env);
-    if (path === '/feedback/click') return registerReviewClick(request, env);
+    if (path === '/health') return await health(request, env);
+    if (path === '/feedback/config') return await feedbackConfig(request, env);
+    if (path === '/feedback') return await submitFeedback(request, env);
+    if (path === '/feedback/click') return await registerReviewClick(request, env);
 
-    if (path === '/admin/setup') return setupAdmin(request, env);
-    if (path === '/admin/auth/login') return adminLogin(request, env);
-    if (path === '/admin/auth/logout') return adminLogout(request, env);
-    if (path === '/admin/me') return adminMe(request, env);
-    if (path === '/admin/dashboard') return adminDashboard(request, env);
-    if (path === '/admin/feedback') return adminFeedbackList(request, env);
-    if (path === '/admin/settings') return adminSettings(request, env);
+    if (path === '/admin/setup') return await setupAdmin(request, env);
+    if (path === '/admin/auth/login') return await adminLogin(request, env);
+    if (path === '/admin/auth/logout') return await adminLogout(request, env);
+    if (path === '/admin/me') return await adminMe(request, env);
+    if (path === '/admin/dashboard') return await adminDashboard(request, env);
+    if (path === '/admin/feedback') return await adminFeedbackList(request, env);
+    if (path === '/admin/settings') return await adminSettings(request, env);
 
     const feedbackMatch = path.match(/^\/admin\/feedback\/([a-zA-Z0-9_-]+)$/);
-    if (feedbackMatch) return adminFeedbackDetail(request, env, feedbackMatch[1]);
+    if (feedbackMatch) return await adminFeedbackDetail(request, env, feedbackMatch[1]);
 
     throw new HttpError(404, 'not_found', 'Rota não encontrada.');
   } catch (error) {
