@@ -14,7 +14,7 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "noru_reviews"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "4214e4cc-3c36-43da-8d67-2eca4290a2cd"
 migrations_dir = "migrations"
 
 [vars]
