@@ -1,0 +1,13 @@
+# Variáveis locais usadas pelo Wrangler Pages Dev
+# Produção: configure em Cloudflare Dashboard > Pages > Settings > Environment variables.
+
+SETUP_TOKEN=troque-por-um-token-longo
+HASH_SALT=troque-por-um-salt-longo
+PUBLIC_TENANT_SLUG=noru
+SESSION_COOKIE_NAME=noru_admin_session
+ADMIN_SESSION_DAYS=7
+PUBLIC_REVIEW_MIN_RATING=4
+ALLOWED_ORIGINS=http://localhost:8788
+
+# Use false apenas em dev local HTTP se o navegador bloquear o cookie Secure.
+COOKIE_SECURE=false

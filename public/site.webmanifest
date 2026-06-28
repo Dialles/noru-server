@@ -1,0 +1,19 @@
+{
+  "name": "NORU · Reviews",
+  "short_name": "NORU",
+  "description": "Compartilhe sua experiência no NORU Sushi Lounge.",
+  "lang": "pt-BR",
+  "start_url": "/client/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#07101a",
+  "theme_color": "#07101a",
+  "icons": [
+    {
+      "src": "/assets/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

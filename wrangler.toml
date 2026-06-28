@@ -1,0 +1,20 @@
+name = "noru-reviews"
+compatibility_date = "2026-06-28"
+pages_build_output_dir = "public"
+
+# O database_id é preenchido automaticamente por `npm run db:create`
+# (ou `npm run setup`). Em dev local o valor placeholder é ignorado.
+[[d1_databases]]
+binding = "DB"
+database_name = "noru_reviews"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+[vars]
+PUBLIC_TENANT_SLUG = "noru"
+SESSION_COOKIE_NAME = "noru_admin_session"
+ADMIN_SESSION_DAYS = "7"
+PUBLIC_REVIEW_MIN_RATING = "4"
+# ALLOWED_ORIGINS = "http://localhost:8788,https://seu-dominio.com.br"
+
+# Use COOKIE_SECURE = "false" somente em desenvolvimento local se o navegador bloquear o cookie em HTTP.

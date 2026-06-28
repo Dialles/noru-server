@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NORU · Painel de Gestão de Reviews</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..600&family=Montserrat:wght@300;400;500;600;700&family=Shippori+Mincho:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/favicon.svg">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#07101a">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="description" content="Painel administrativo NORU para gestão de reviews, métricas e QR Code.">
+  <script src="/admin/vendor/qrcode-generator.min.js" defer></script>
+  <script src="/admin/vendor/qrcode-canvas.js" defer></script>
+  <style>
+    :root{
+      --sumi:#07101a;
+      --sumi-2:#0d1b29;
+      --panel:#101d2a;
+      --panel-2:#132233;
+      --line:rgba(254,228,148,.14);
+      --line-strong:rgba(254,228,148,.28);
+      --washi:#f6efe0;
+      --muted:#bdb3a2;
+      --brass:#fee494;
+      --brass-deep:#9b7428;
+      --danger:#d4593b;
+      --ok:#78b98d;
+      --warning:#e0ad55;
+      --info:#8fb4e8;
+      --radius:18px;
+      --shadow:0 18px 50px rgba(0,0,0,.28);
+      --serif:'Fraunces', Georgia, serif;
+      --mincho:'Shippori Mincho','Fraunces',serif;
+      --sans:'Montserrat',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      --ease:cubic-bezier(.22,.61,.36,1);
+      --sidebar-open:260px;
+      --sidebar-closed:84px;
+    }
+
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{
+      min-height:100svh;
+      background:var(--sumi);
+      color:var(--washi);
+      font-family:var(--sans);
+      font-weight:300;
+      line-height:1.5;
+      -webkit-font-smoothing:antialiased;
+      text-rendering:optimizeLegibility;
+    }
+    button,input,textarea,select{font:inherit;color:inherit}
+    button{cursor:pointer}
+    a{color:inherit;text-decoration:none}
+    :focus-visible{outline:2px solid var(--brass);outline-offset:2px;border-radius:10px}
+
+    .app{
+      min-height:100svh;
+      display:grid;
+      grid-template-columns:var(--sidebar-open) minmax(0,1fr);
+      transition:grid-template-columns .22s var(--ease);
+    }
+    body.sidebar-collapsed .app{grid-template-columns:var(--sidebar-closed) minmax(0,1fr)}
+    .sidebar{
+      position:sticky;top:0;height:100svh;z-index:40;
+      display:flex;flex-direction:column;
+      padding:18px;
+      background:linear-gradient(180deg,#0a1622,#07101a);
+      border-right:1px solid var(--line);
+      transition:transform .24s var(--ease),padding .22s var(--ease),box-shadow .22s var(--ease);
+    }
+    body.sidebar-collapsed .sidebar{padding:18px 12px}
+    .brand{
+      display:flex;align-items:center;justify-content:center;
+      padding:8px 6px 20px;border-bottom:1px solid var(--line);
+      min-height:78px;
+    }
+    .brand-logo{display:block;width:160px;max-width:100%;color:var(--brass)}
+    .brand-logo svg{display:block;width:100%;height:auto}
+    .logo-mark,.logo-word,.logo-line{transition:.18s var(--ease)}
+    body.sidebar-collapsed .brand{padding:8px 0 18px;min-height:70px}
+    body.sidebar-collapsed .brand-logo{width:44px}
+    body.sidebar-collapsed .logo-word,body.sidebar-collapsed .logo-line{display:none}
+
+    .menu-toggle{
+      appearance:none;border:1px solid var(--line);border-radius:12px;
+      width:40px;height:40px;display:inline-grid;place-items:center;flex:0 0 auto;
+      background:rgba(254,228,148,.055);color:var(--washi);
+      transition:.18s var(--ease);
+    }
+    .menu-toggle:hover{border-color:var(--line-strong);background:rgba(254,228,148,.09)}
+    .menu-toggle span,.menu-toggle:before,.menu-toggle:after{
+      content:"";display:block;width:17px;height:2px;border-radius:999px;background:currentColor;
+      transition:.18s var(--ease);
+    }
+    .menu-toggle{gap:4px}
+    body.sidebar-collapsed .menu-toggle span{width:12px}
+    body.sidebar-collapsed .menu-toggle:before{width:17px}
+    body.sidebar-collapsed .menu-toggle:after{width:8px}
+
+    .sidebar-backdrop{display:none}
+
+    .nav{display:grid;gap:6px;margin-top:18px}
+    .nav button{
+      appearance:none;border:1px solid transparent;background:transparent;
+      color:var(--muted);border-radius:12px;padding:11px 12px;
+      display:flex;justify-content:space-between;gap:10px;align-items:center;
+      text-align:left;transition:.18s var(--ease);min-height:46px;
+    }
+    .nav button .left{display:flex;gap:10px;align-items:center;font-weight:500;font-size:.9rem;min-width:0}
+    .nav button .ico{width:22px;text-align:center;opacity:.8;flex:0 0 22px}
+    .nav button .nav-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .nav button small{font-size:.7rem;color:rgba(246,239,224,.42);white-space:nowrap}
+    .nav button:hover,.nav button.active{background:rgba(254,228,148,.07);border-color:var(--line);color:var(--washi)}
+    body.sidebar-collapsed .nav button{justify-content:center;padding:11px 8px}
+    body.sidebar-collapsed .nav button .left{justify-content:center;gap:0}
+    body.sidebar-collapsed .nav button .nav-label,body.sidebar-collapsed .nav button small{display:none}
+
+    .sidebar-footer{margin-top:auto;display:grid;gap:10px}
+    .tenant{
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:13px;
+      background:rgba(255,255,255,.025);
+    }
+    .tenant label{display:block;color:var(--muted);font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;margin-bottom:4px}
+    .tenant strong{display:block;font-size:.9rem;font-weight:600}
+    .tenant p{color:var(--muted);font-size:.78rem;margin-top:3px}
+    body.sidebar-collapsed .sidebar-footer{display:none}
+
+    .main{min-width:0;padding:22px clamp(16px,3vw,34px) 42px;background:radial-gradient(900px 420px at 75% -15%,rgba(254,228,148,.07),transparent 55%)}
+    .topbar{
+      display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid rgba(254,228,148,.1);
+    }
+    .topbar-left{display:flex;align-items:flex-start;gap:12px;min-width:0}
+    .page-title{display:grid;gap:4px}
+    .eyebrow{font-size:.68rem;letter-spacing:.22em;text-transform:uppercase;color:var(--brass);font-weight:700}
+    h1{font-family:var(--serif);font-weight:350;font-size:clamp(1.45rem,2.8vw,2.45rem);line-height:1.05}
+    h2{font-family:var(--serif);font-weight:350;font-size:1.45rem;line-height:1.1}
+    h3{font-size:.98rem;font-weight:650;letter-spacing:.01em}
+    .muted{color:var(--muted)}
+    .small{font-size:.82rem}
+
+    .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+    .pill{
+      display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);
+      border-radius:999px;padding:8px 11px;color:var(--muted);font-size:.78rem;background:rgba(255,255,255,.025);
+      white-space:nowrap;
+    }
+    .dot{width:8px;height:8px;border-radius:999px;background:var(--ok);box-shadow:0 0 0 4px rgba(120,185,141,.12)}
+    .btn{
+      appearance:none;border:1px solid var(--line);border-radius:12px;
+      background:rgba(254,228,148,.055);color:var(--washi);
+      min-height:38px;padding:8px 12px;font-weight:650;font-size:.82rem;
+      display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:.18s var(--ease);
+    }
+    .btn:hover{border-color:var(--line-strong);background:rgba(254,228,148,.09)}
+    .btn.primary{background:var(--brass);border-color:var(--brass);color:#171008}
+    .btn.ghost{background:transparent}
+    .btn.danger{border-color:rgba(212,89,59,.35);background:rgba(212,89,59,.08);color:#ffd4ca}
+    .btn.icon{width:34px;height:34px;min-height:34px;padding:0;border-radius:10px}
+    .btn.full{width:100%}
+
+    .section{display:none;animation:show .22s var(--ease)}
+    .section.active{display:block}
+    @keyframes show{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+    .grid{display:grid;gap:14px}
+    .cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .card{
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      background:linear-gradient(180deg,rgba(16,29,42,.92),rgba(13,27,41,.74));
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .card-head{
+      min-height:58px;padding:15px 16px;
+      display:flex;align-items:center;justify-content:space-between;gap:14px;
+      border-bottom:1px solid rgba(254,228,148,.09);
+    }
+    .card-head p{color:var(--muted);font-size:.8rem;margin-top:2px}
+    .card-body{padding:16px}
+
+    .metric{padding:16px;border:1px solid var(--line);border-radius:var(--radius);background:rgba(16,29,42,.78)}
+    .metric label{font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:650}
+    .metric .value{font-family:var(--serif);font-size:2rem;line-height:1;margin-top:12px}
+    .metric .delta{font-size:.78rem;color:var(--muted);margin-top:10px}
+    .metric.ok .delta{color:#c7f0d3}.metric.warn .delta{color:#ffe0a3}.metric.danger .delta{color:#ffd0c5}
+
+    .toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+    .chips{display:flex;gap:7px;flex-wrap:wrap}
+    .chip{
+      appearance:none;border:1px solid var(--line);background:rgba(255,255,255,.018);color:var(--muted);
+      border-radius:999px;padding:7px 10px;font-size:.78rem;transition:.18s var(--ease);
+    }
+    .chip:hover,.chip.active{color:var(--washi);background:rgba(254,228,148,.08);border-color:var(--line-strong)}
+
+    table{width:100%;border-collapse:separate;border-spacing:0}
+    th,td{padding:12px 10px;text-align:left;border-bottom:1px solid rgba(254,228,148,.08);vertical-align:middle}
+    th{font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:700}
+    td{font-size:.86rem;color:var(--washi)}
+    tr:last-child td{border-bottom:0}
+    .stars{color:var(--brass);letter-spacing:.06em;white-space:nowrap}
+    .status{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 8px;font-size:.72rem;color:var(--muted);white-space:nowrap}
+    .status:before{content:"";width:7px;height:7px;border-radius:999px;background:var(--muted)}
+    .status.pending:before{background:var(--warning)}
+    .status.low:before{background:var(--danger)}
+    .status.done:before{background:var(--ok)}
+
+    .split{display:grid;grid-template-columns:390px minmax(0,1fr);gap:14px;align-items:start}
+    .step-list{display:grid;gap:9px}
+    .step{
+      border:1px solid rgba(254,228,148,.12);border-radius:14px;
+      background:rgba(7,16,26,.42);padding:12px;
+      display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:10px;align-items:center;
+      transition:.18s var(--ease);
+    }
+    .step[draggable="true"]{cursor:grab}
+    .step.dragging{opacity:.4}
+    .step.selected{background:rgba(254,228,148,.08);border-color:var(--line-strong)}
+    .handle{color:var(--muted);font-size:1rem;letter-spacing:-.12em;transform:rotate(90deg)}
+    .step strong{display:block;font-size:.9rem;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .step span{display:block;color:var(--muted);font-size:.76rem;margin-top:2px}
+    .step-actions{display:flex;gap:5px}
+
+    .form-grid{display:grid;gap:13px}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .field{display:grid;gap:6px}
+    .field label{font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:700}
+    .field .help{color:var(--muted);font-size:.74rem;margin-top:1px}
+    input,select,textarea{
+      width:100%;border:1px solid rgba(254,228,148,.16);background:rgba(7,16,26,.5);
+      border-radius:12px;padding:10px 11px;outline:none;transition:.18s var(--ease);
+    }
+    textarea{min-height:96px;resize:vertical}
+    input:focus,select:focus,textarea:focus{border-color:var(--line-strong);background:rgba(7,16,26,.72)}
+    .checkline{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid rgba(254,228,148,.11);border-radius:14px;padding:12px;background:rgba(7,16,26,.36)}
+    .checkline strong{font-size:.86rem}.checkline span{display:block;color:var(--muted);font-size:.76rem;margin-top:2px}
+    .switch{position:relative;width:42px;height:24px;flex:0 0 auto}
+    .switch input{position:absolute;opacity:0;inset:0}
+    .switch i{position:absolute;inset:0;border-radius:999px;background:rgba(246,239,224,.18);transition:.18s var(--ease)}
+    .switch i:before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;border-radius:999px;background:var(--muted);transition:.18s var(--ease)}
+    .switch input:checked+i{background:rgba(254,228,148,.28)}
+    .switch input:checked+i:before{transform:translateX(18px);background:var(--brass)}
+
+    .preview{
+      max-width:340px;margin:0 auto;border:1px solid var(--line);border-radius:28px;padding:12px;background:#07101a;
+      box-shadow:inset 0 0 0 5px rgba(255,255,255,.025);
+    }
+    .preview-screen{border-radius:21px;overflow:hidden;background:linear-gradient(180deg,#101d2a,#07101a);min-height:520px;border:1px solid rgba(254,228,148,.09)}
+    .preview-top{padding:22px;text-align:center;border-bottom:1px solid rgba(254,228,148,.08)}
+    .preview-top .logo{font-family:var(--mincho);font-size:1.35rem;color:var(--brass);margin-bottom:5px}
+    .preview-body{padding:18px;display:grid;gap:12px}
+    .preview-step{border:1px solid rgba(254,228,148,.12);background:rgba(255,255,255,.025);border-radius:14px;padding:12px}
+    .preview-step label{display:block;color:var(--brass);font-size:.67rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;margin-bottom:6px}
+    .preview-step p{font-size:.88rem}.preview-step small{display:block;color:var(--muted);margin-top:4px}
+
+    .settings-groups{display:grid;gap:14px}
+    .settings-group{border:1px solid var(--line);border-radius:var(--radius);background:rgba(16,29,42,.72);overflow:hidden}
+    .settings-title{padding:14px 16px;border-bottom:1px solid rgba(254,228,148,.09);display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .settings-title span{color:var(--muted);font-size:.78rem}
+    .settings-content{padding:16px;display:grid;gap:13px}
+
+    .qr-layout{display:grid;grid-template-columns:330px minmax(0,1fr);gap:14px;align-items:start}
+    .qr-box{display:grid;gap:12px;place-items:center;text-align:center}
+    #qrCanvas{width:220px;height:220px;border-radius:18px;background:var(--washi);padding:12px}
+    .qr-fallback{width:220px;height:220px;border-radius:18px;background:var(--washi);color:#0a1622;display:none;place-items:center;padding:16px;text-align:center;font-weight:700;font-size:.78rem;word-break:break-all}
+    .url-box{border:1px solid rgba(254,228,148,.12);border-radius:14px;padding:12px;background:rgba(7,16,26,.38);word-break:break-all;font-size:.85rem}
+    .history{display:grid;gap:9px}
+    .history-item{display:flex;justify-content:space-between;gap:12px;align-items:center;border:1px solid rgba(254,228,148,.1);border-radius:12px;padding:10px;background:rgba(7,16,26,.34)}
+    .history-item div{min-width:0}.history-item strong{display:block;font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.history-item span{color:var(--muted);font-size:.74rem}
+
+    .toast{position:fixed;right:20px;bottom:20px;z-index:30;display:grid;gap:8px}
+    .toast-msg{border:1px solid var(--line);background:#101d2a;border-radius:14px;padding:11px 12px;box-shadow:var(--shadow);font-size:.82rem;color:var(--washi);animation:toast .18s var(--ease)}
+    @keyframes toast{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+
+
+    body:not(.is-authenticated) .app{filter:blur(2px);pointer-events:none;user-select:none}
+    .auth-screen{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:18px;background:radial-gradient(800px 440px at 50% 0,rgba(254,228,148,.10),rgba(7,16,26,.96) 58%),rgba(7,16,26,.96)}
+    body.is-authenticated .auth-screen{display:none}
+    .auth-card{width:min(100%,440px);border:1px solid var(--line);border-radius:24px;background:linear-gradient(180deg,#101d2a,#0a1622);box-shadow:var(--shadow);padding:22px;display:grid;gap:16px}
+    .auth-card h2{font-size:1.6rem}.auth-card p{color:var(--muted);font-size:.86rem}
+    .auth-panel{display:grid;gap:12px}.auth-panel[hidden]{display:none}
+    .auth-error{min-height:20px;color:#ffd0c5;font-size:.82rem}.auth-error:empty{display:none}
+    .topbar-actions{flex:0 0 auto}
+    .empty-state{padding:26px;text-align:center;color:var(--muted)}
+    .loading-row td{color:var(--muted)}
+    .status.new:before{background:var(--warning)}
+    .status.needs_attention:before{background:var(--danger)}
+    .status.contacted:before{background:var(--info)}
+    .status.resolved:before,.status.promoter:before{background:var(--ok)}
+    .status.archived:before{background:var(--muted)}
+    .modal{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:18px;background:rgba(0,0,0,.58);backdrop-filter:blur(5px)}
+    .modal[hidden]{display:none}
+    .modal-card{width:min(100%,720px);max-height:min(840px,92svh);overflow:auto;border:1px solid var(--line);border-radius:22px;background:linear-gradient(180deg,#101d2a,#0a1622);box-shadow:var(--shadow)}
+    .modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:16px;border-bottom:1px solid rgba(254,228,148,.09)}
+    .modal-body{padding:16px;display:grid;gap:14px}
+    .detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .detail-item{border:1px solid rgba(254,228,148,.1);border-radius:13px;padding:10px;background:rgba(7,16,26,.34)}
+    .detail-item label{display:block;color:var(--muted);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;margin-bottom:4px}.detail-item div{word-break:break-word;font-size:.86rem}
+    .settings-actions{justify-content:flex-start;margin-top:4px}
+
+    @media (max-width:1080px){
+      .cols-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .split,.qr-layout{grid-template-columns:1fr}
+      .preview{max-width:420px}
+    }
+    @media (max-width:820px){
+      .app,body.sidebar-collapsed .app{grid-template-columns:1fr}
+      .sidebar{
+        position:fixed;inset:0 auto 0 0;width:min(84vw,320px);height:100svh;
+        transform:translateX(-102%);border-right:1px solid var(--line);border-bottom:0;
+        box-shadow:0 28px 80px rgba(0,0,0,.42);
+      }
+      body.sidebar-open .sidebar{transform:translateX(0)}
+      body.sidebar-collapsed .sidebar{padding:18px}
+      body.sidebar-collapsed .brand-logo{width:160px}
+      body.sidebar-collapsed .logo-word,body.sidebar-collapsed .logo-line{display:block}
+      body.sidebar-collapsed .nav button{justify-content:space-between;padding:11px 12px}
+      body.sidebar-collapsed .nav button .left{justify-content:flex-start;gap:10px}
+      body.sidebar-collapsed .nav button .nav-label,body.sidebar-collapsed .nav button small{display:inline}
+      body.sidebar-collapsed .sidebar-footer{display:grid}
+      .nav{grid-template-columns:1fr}
+      .sidebar-footer{display:grid}
+      .sidebar-backdrop{
+        position:fixed;inset:0;z-index:35;background:rgba(0,0,0,.48);
+        backdrop-filter:blur(2px);
+      }
+      body.sidebar-open .sidebar-backdrop{display:block}
+      .topbar{align-items:flex-start;gap:12px}
+      .topbar-left{align-items:flex-start}
+      .actions{justify-content:flex-start}
+      .cols-3,.cols-4,.cols-2,.form-row{grid-template-columns:1fr}
+      .table-wrap{overflow-x:auto}
+      table{min-width:720px}
+    }
+    @media print{
+      body{background:white;color:#111}
+      .sidebar,.sidebar-backdrop,.topbar,.nav,.actions,.menu-toggle,.btn:not(.print-keep),.card:not(.print-card){display:none!important}
+      .app,.main{display:block;padding:0;background:white}
+      .print-card{border:0;box-shadow:none;background:white;color:#111}
+      #qrCanvas{border:1px solid #ddd}
+    }
+  </style>
+</head>
+<body>
+  <section class="auth-screen" id="authScreen" aria-labelledby="authTitle">
+    <div class="auth-card">
+      <div>
+        <div class="eyebrow">Acesso protegido</div>
+        <h2 id="authTitle">Entrar no painel</h2>
+        <p>Use uma conta administradora para acessar reviews, configurações e QR Code.</p>
+      </div>
+      <form class="auth-panel" id="loginForm">
+        <div class="field"><label for="loginEmail">E-mail</label><input id="loginEmail" name="email" type="email" autocomplete="username" required></div>
+        <div class="field"><label for="loginPassword">Senha</label><input id="loginPassword" name="password" type="password" autocomplete="current-password" required></div>
+        <button class="btn primary full" type="submit">Entrar</button>
+        <button class="btn ghost full" type="button" id="showSetupBtn">Criar admin inicial</button>
+        <p class="auth-error" id="loginError" role="alert"></p>
+      </form>
+      <form class="auth-panel" id="setupForm" hidden>
+        <div class="field"><label for="setupToken">Setup token</label><input id="setupToken" name="setup_token" type="password" autocomplete="off" required></div>
+        <div class="form-row">
+          <div class="field"><label for="setupTenantSlug">Slug</label><input id="setupTenantSlug" name="tenant_slug" value="noru" required></div>
+          <div class="field"><label for="setupName">Nome</label><input id="setupName" name="name" value="Administrador" required></div>
+        </div>
+        <div class="field"><label for="setupEmail">E-mail admin</label><input id="setupEmail" name="email" type="email" autocomplete="username" required></div>
+        <div class="field"><label for="setupPassword">Senha admin</label><input id="setupPassword" name="password" type="password" minlength="10" autocomplete="new-password" required></div>
+        <button class="btn primary full" type="submit">Criar admin</button>
+        <button class="btn ghost full" type="button" id="showLoginBtn">Voltar ao login</button>
+        <p class="auth-error" id="setupError" role="alert"></p>
+      </form>
+    </div>
+  </section>
+
+  <div class="app">
+    <aside class="sidebar" id="sidebar" aria-label="Navegação do painel">
+      <div class="brand">
+        <a class="brand-logo" href="#" aria-label="Noru Sushi Lounge">
+          <svg viewBox="0 0 220 82" role="img" aria-labelledby="noruLogoTitle" xmlns="http://www.w3.org/2000/svg">
+            <title id="noruLogoTitle">Noru Sushi Lounge</title>
+            <defs>
+              <linearGradient id="noruGold" x1="0" x2="1" y1="0" y2="1">
+                <stop offset="0" stop-color="#fee494"/>
+                <stop offset="1" stop-color="#9b7428"/>
+              </linearGradient>
+            </defs>
+            <rect class="logo-mark" x="6" y="10" width="54" height="54" rx="18" fill="rgba(254,228,148,.06)" stroke="rgba(254,228,148,.34)"/>
+            <text class="logo-mark" x="33" y="48" text-anchor="middle" font-family="Shippori Mincho, Fraunces, Georgia, serif" font-size="31" fill="url(#noruGold)">の</text>
+            <text class="logo-word" x="76" y="38" font-family="Fraunces, Georgia, serif" font-size="29" font-weight="400" letter-spacing="7" fill="#f6efe0">NORU</text>
+            <path class="logo-line" d="M78 50H198" stroke="rgba(254,228,148,.55)" stroke-width="1"/>
+            <text class="logo-line" x="76" y="66" font-family="Montserrat, Arial, sans-serif" font-size="8" font-weight="600" letter-spacing="3" fill="#fee494">SUSHI LOUNGE</text>
+          </svg>
+        </a>
+      </div>
+
+      <nav class="nav">
+        <button class="active" data-section="dashboard" title="Dashboard"><span class="left"><span class="ico">▦</span><span class="nav-label">Dashboard</span></span><small>Hoje</small></button>
+        <button data-section="reviews" title="Reviews"><span class="left"><span class="ico">★</span><span class="nav-label">Reviews</span></span><small>24</small></button>
+        <button data-section="settings" title="Ajustes"><span class="left"><span class="ico">⚙</span><span class="nav-label">Ajustes</span></span><small>Organizado</small></button>
+        <button data-section="qr" title="QR Code"><span class="left"><span class="ico">▣</span><span class="nav-label">QR Code</span></span><small>Gerar</small></button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="tenant">
+          <label>Unidade ativa</label>
+          <strong>Noru Sushi Lounge</strong>
+          <p>Salão principal · São Paulo</p>
+        </div>
+      </div>
+    </aside>
+    <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" id="sidebarToggle" type="button" aria-label="Recolher ou exibir menu" aria-controls="sidebar" aria-expanded="true"><span></span></button>
+          <div class="page-title">
+            <div class="eyebrow" id="pageEyebrow">Painel</div>
+            <h1 id="pageTitle">Dashboard de reviews</h1>
+            <p class="muted small" id="pageSubtitle">Acompanhe a experiência dos clientes e gerencie o canal público de reviews.</p>
+          </div>
+        </div>
+        <div class="actions topbar-actions">
+          <span class="pill"><span class="dot"></span><span id="adminIdentity">Sessão</span></span>
+          <button class="btn ghost" id="refreshBtn" type="button">Atualizar</button>
+          <button class="btn danger" id="logoutBtn" type="button">Sair</button>
+        </div>
+      </header>
+
+      <section class="section active" id="dashboard">
+        <div class="grid cols-4">
+          <article class="metric ok"><label>Nota média</label><div class="value" id="metricAverage">--</div><p class="delta" id="metricAverageDelta">Período: 30 dias</p></article>
+          <article class="metric"><label>Reviews</label><div class="value" id="metricTotal">--</div><p class="delta" id="metricTotalDelta">Carregando servidor</p></article>
+          <article class="metric warn"><label>Atenção</label><div class="value" id="metricAttention">--</div><p class="delta">Notas abaixo do corte</p></article>
+          <article class="metric"><label>Cliques externos</label><div class="value" id="metricClicks">--</div><p class="delta">Google, Tripadvisor e afins</p></article>
+        </div>
+
+        <div class="grid cols-2" style="margin-top:14px">
+          <article class="card">
+            <div class="card-head">
+              <div><h3>Resumo operacional</h3><p>Principais sinais das últimos reviews.</p></div>
+              <button class="btn ghost" data-section-jump="reviews">Ver todas</button>
+            </div>
+            <div class="card-body">
+              <div class="grid">
+                <div class="checkline"><div><strong>Reviews recentes</strong><span id="summaryRecent">Carregando dados do servidor.</span></div><span class="status new">Fila</span></div>
+                <div class="checkline"><div><strong>Promotoras</strong><span id="summaryPromoters">Notas acima do corte configurado.</span></div><span class="status promoter">Alta</span></div>
+                <div class="checkline"><div><strong>QR Code</strong><span id="summaryQr">Destino atual validado pela configuração.</span></div><span class="status done">Ativo</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <div><h3>Canal público</h3><p>Status da página pública e do acesso por QR.</p></div>
+              <button class="btn ghost" data-section-jump="qr">Abrir QR</button>
+            </div>
+            <div class="card-body">
+              <div class="grid" id="dashboardQrSummary">
+                <div class="checkline"><div><strong>Link permanente</strong><span id="dashboardStableUrl">https://noru.link/q/noru-sushi</span></div><span class="status done">Ativo</span></div>
+                <div class="checkline"><div><strong>Destino atual</strong><span id="dashboardTargetUrl">https://noru-sushi-lounge.com/avaliacao</span></div><span class="status done">Online</span></div>
+                <div class="checkline"><div><strong>Material impresso</strong><span>Use sempre o QR com link fixo para evitar retrabalho.</span></div><span class="status done">Seguro</span></div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="reviews">
+        <div class="toolbar">
+          <div class="chips" role="tablist" aria-label="Filtros de reviews">
+            <button class="chip active" data-filter="all">Todas</button>
+            <button class="chip" data-filter="new">Novas</button>
+            <button class="chip" data-filter="needs_attention">Atenção</button>
+            <button class="chip" data-filter="contacted">Contatadas</button>
+            <button class="chip" data-filter="resolved">Resolvidas</button>
+          </div>
+          <button class="btn" id="refreshReviewsBtn" type="button">Atualizar lista</button>
+        </div>
+        <article class="card">
+          <div class="card-head">
+            <div><h3>Reviews recebidos</h3><p>Fila para análise, resposta e classificação interna.</p></div>
+          </div>
+          <div class="table-wrap">
+            <table aria-label="Tabela de reviews">
+              <thead><tr><th>Cliente</th><th>Nota</th><th>Comentário</th><th>Origem</th><th>Status</th><th>Ações</th></tr></thead>
+              <tbody id="reviewTable"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section class="section" id="settings">
+        <div class="settings-groups">
+          <div class="settings-group">
+            <div class="settings-title"><div><h3>Configurações públicas</h3><span>Campos usados pela página do cliente e pelo QR Code.</span></div></div>
+            <div class="settings-content">
+              <div class="form-row">
+                <div class="field"><label for="settingsReviewMinRating">Nota mínima para review público</label><select id="settingsReviewMinRating"><option value="1">1 estrela</option><option value="2">2 estrelas</option><option value="3">3 estrelas</option><option value="4">4 estrelas</option><option value="5">5 estrelas</option></select></div>
+                <div class="field"><label for="settingsWhatsappUrl">WhatsApp da equipe</label><input id="settingsWhatsappUrl" placeholder="https://wa.me/55..."></div>
+              </div>
+              <div class="form-row">
+                <div class="field"><label for="settingsStableQrUrl">URL permanente do QR</label><input id="settingsStableQrUrl" placeholder="https://seudominio.com.br/client/?tenant=noru"></div>
+                <div class="field"><label for="settingsPublicPageUrl">Página pública atual</label><input id="settingsPublicPageUrl" placeholder="https://seudominio.com.br/client/?tenant=noru"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-title"><div><h3>Plataformas externas</h3><span>Links exibidos depois de um review promotor.</span></div></div>
+            <div class="settings-content">
+              <div class="field"><label for="settingsGoogleUrl">Google review URL</label><input id="settingsGoogleUrl" placeholder="https://..."></div>
+              <div class="field"><label for="settingsTripadvisorUrl">Tripadvisor review URL</label><input id="settingsTripadvisorUrl" placeholder="https://..."></div>
+              <div class="field"><label for="settingsInstagramUrl">Instagram URL</label><input id="settingsInstagramUrl" placeholder="https://..."></div>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-title"><div><h3>Mensagens de retorno</h3><span>Textos exibidos ao cliente após o envio.</span></div></div>
+            <div class="settings-content">
+              <div class="field"><label for="settingsPublicMessage">Mensagem para notas altas</label><textarea id="settingsPublicMessage"></textarea></div>
+              <div class="field"><label for="settingsNegativeMessage">Mensagem para notas baixas</label><textarea id="settingsNegativeMessage"></textarea></div>
+              <div class="actions settings-actions"><button class="btn primary" id="saveSettingsBtn" type="button">Salvar configurações</button><button class="btn ghost" id="reloadSettingsBtn" type="button">Recarregar</button></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="qr">
+        <div class="qr-layout">
+          <article class="card print-card">
+            <div class="card-head"><div><h3>QR Code impresso</h3><p>Use sempre o link permanente no material físico.</p></div></div>
+            <div class="card-body qr-box">
+              <canvas id="qrCanvas" width="220" height="220" aria-label="QR Code"></canvas>
+              <div class="qr-fallback" id="qrFallback"></div>
+              <div>
+                <div class="eyebrow">Link fixo</div>
+                <div class="url-box" id="stableUrlView"></div>
+              </div>
+              <div class="actions" style="justify-content:center"><button class="btn primary" id="generateQrBtn">Gerar QR Code</button><button class="btn" id="copyStableBtn">Copiar</button><button class="btn" id="downloadQrBtn">Baixar PNG</button><button class="btn ghost print-keep" onclick="window.print()">Imprimir</button></div>
+            </div>
+          </article>
+
+          <div class="grid">
+            <article class="card">
+              <div class="card-head"><div><h3>Redirecionamento</h3><p>Altere o destino sem trocar o QR dos cards impressos.</p></div></div>
+              <div class="card-body">
+                <div class="form-grid">
+                  <div class="field"><label for="stableUrl">URL permanente do QR</label><input id="stableUrl" value=""></div>
+                  <div class="field"><label for="targetUrl">Página pública atual</label><input id="targetUrl" value=""></div>
+                  <div class="checkline"><div><strong>Estratégia recomendada</strong><span>O QR impresso aponta para a URL permanente. O painel altera somente o destino final.</span></div><span class="status done">Seguro</span></div>
+                  <div class="actions" style="justify-content:flex-start"><button class="btn primary" id="saveRedirectBtn">Salvar redirecionamento</button><button class="btn" id="generateQrBtnInline">Gerar QR Code</button><button class="btn ghost" id="testTargetBtn">Testar destino</button></div>
+                </div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-head"><div><h3>Histórico de destinos</h3><p>Controle de alterações feitas no link permanente.</p></div></div>
+              <div class="card-body"><div class="history" id="historyList"></div></div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal" id="reviewModal" hidden>
+    <article class="modal-card" role="dialog" aria-modal="true" aria-labelledby="reviewModalTitle">
+      <div class="modal-head">
+        <div><div class="eyebrow">Review</div><h2 id="reviewModalTitle">Detalhe do feedback</h2><p class="muted small" id="detailCreatedAt"></p></div>
+        <button class="btn ghost" id="closeReviewModal" type="button">Fechar</button>
+      </div>
+      <div class="modal-body">
+        <div class="detail-grid">
+          <div class="detail-item"><label>Cliente</label><div id="detailCustomer">--</div></div>
+          <div class="detail-item"><label>Nota</label><div id="detailRating">--</div></div>
+          <div class="detail-item"><label>Contato</label><div id="detailContact">--</div></div>
+          <div class="detail-item"><label>Origem</label><div id="detailOrigin">--</div></div>
+        </div>
+        <div class="detail-item"><label>Comentário</label><div id="detailComment">--</div></div>
+        <div class="form-row">
+          <div class="field"><label for="detailStatus">Status</label><select id="detailStatus"><option value="new">Nova</option><option value="needs_attention">Precisa de atenção</option><option value="contacted">Contatada</option><option value="resolved">Resolvida</option><option value="archived">Arquivada</option><option value="promoter">Promotora</option></select></div>
+          <div class="field"><label for="detailInternalNote">Nota interna</label><textarea id="detailInternalNote" placeholder="Registro da tratativa interna"></textarea></div>
+        </div>
+        <div class="actions"><button class="btn primary" id="saveReviewStatus" type="button">Salvar tratativa</button></div>
+      </div>
+    </article>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="/admin/js/app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "name": "noru-reviews-cloudflare",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "setup": "bash scripts/setup.sh",
+    "dev": "bash scripts/dev.sh",
+    "dev:raw": "wrangler pages dev public --compatibility-date=2026-06-28",
+    "db:create": "bash scripts/db-create.sh",
+    "db:migrate": "bash scripts/db-migrate.sh local",
+    "db:migrate:local": "wrangler d1 migrations apply noru_reviews --local",
+    "db:migrate:remote": "wrangler d1 migrations apply noru_reviews --remote",
+    "db:reset": "bash scripts/db-reset.sh",
+    "db:seed": "bash scripts/seed.sh",
+    "secrets": "bash scripts/secrets.sh",
+    "create-admin": "bash scripts/create-admin.sh",
+    "smoke": "bash scripts/smoke.sh",
+    "deploy": "bash scripts/deploy.sh",
+    "deploy:raw": "wrangler pages deploy public --project-name=noru-reviews",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "latest",
+    "typescript": "latest",
+    "wrangler": "latest"
+  }
+}

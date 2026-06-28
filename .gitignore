@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+!.dev.vars.example
+.prod.vars
+!.prod.vars.example
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+data/*.sqlite
+data/*.sqlite-*
+
+# Configuração local do Claude Code (não versionar)
+.claude/
