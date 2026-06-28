@@ -15,6 +15,3 @@ data/*.sqlite-*
 
 # Configuração local do Claude Code (não versionar)
 .claude/
-
-# Runbook local com segredos (não versionar)
-FINALIZAR_DEPLOY.md
