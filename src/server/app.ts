@@ -1,6 +1,6 @@
 import type { Env, Tenant } from './types';
 import { requireAdmin, loginAdmin, logoutAdmin } from './auth';
-import { hashPassword, sha256Base64Url } from './crypto';
+import { hashPassword, sha256Base64Url, timingSafeEqualString } from './crypto';
 import { handleError, HttpError, json, options, readJsonBody, requireMethod } from './http';
 import { allowedStatus, assertEmail, assertSlug, asBoolean, asInteger, asString } from './validators';
 
@@ -54,6 +54,14 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
 function normalizePath(pathname: string): string {
   const path = pathname.replace(/^\/api/, '') || '/';
   return path.endsWith('/') && path.length > 1 ? path.slice(0, -1) : path;
+}
+
+// Parser tolerante para parâmetros numéricos de query string: valores ausentes
+// ou inválidos (NaN) caem no default em vez de gerar 500/consulta sem limite.
+function intParam(raw: string | null, fallback: number, min: number, max: number): number {
+  const parsed = Number(raw);
+  const value = Number.isFinite(parsed) ? parsed : fallback;
+  return Math.max(min, Math.min(Math.trunc(value), max));
 }
 
 async function health(request: Request, env: Env): Promise<Response> {
@@ -170,9 +178,13 @@ async function setupAdmin(request: Request, env: Env): Promise<Response> {
   requireMethod(request, 'POST');
   if (!env.SETUP_TOKEN) throw new HttpError(500, 'setup_token_missing', 'Configure SETUP_TOKEN antes de criar o admin inicial.');
 
+  // Compara sem espaços/quebras nas pontas: o cliente já envia o token com
+  // trim(), e segredos colados no painel da Cloudflare costumam vir com um
+  // \n/espaço final que, sem isso, gera um 403 "token inválido" enganoso.
+  const expectedToken = env.SETUP_TOKEN.trim();
   const body = await readJsonBody(request);
-  const providedToken = request.headers.get('x-setup-token') || asString(body.setup_token, 'setup_token');
-  if (providedToken !== env.SETUP_TOKEN) throw new HttpError(403, 'forbidden', 'Token de setup inválido.');
+  const providedToken = (request.headers.get('x-setup-token') || asString(body.setup_token, 'setup_token') || '').trim();
+  if (!(await timingSafeEqualString(providedToken, expectedToken))) throw new HttpError(403, 'forbidden', 'Token de setup inválido.');
 
   const count = await adminCount(env);
   if (count > 0) throw new HttpError(409, 'setup_already_done', 'O admin inicial já foi criado.');
@@ -231,19 +243,24 @@ async function adminDashboard(request: Request, env: Env): Promise<Response> {
   requireMethod(request, 'GET');
   const auth = await requireAdmin(request, env);
   const url = new URL(request.url);
-  const days = Math.max(1, Math.min(Number(url.searchParams.get('days') || '30'), 365));
+  const days = intParam(url.searchParams.get('days'), 30, 1, 365);
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+  // Usa o mesmo corte configurável (review_min_rating) aplicado na gravação do
+  // feedback, para que o dashboard não divirja do status real armazenado.
+  const settings = await getSettings(env, auth.admin.tenant_id);
+  const minRating = Number(settings.review_min_rating || env.PUBLIC_REVIEW_MIN_RATING || DEFAULT_SETTINGS.review_min_rating);
 
   const metrics = await env.DB.prepare(`
     SELECT
       COUNT(*) AS total,
       AVG(rating) AS average_rating,
-      SUM(CASE WHEN rating >= 4 THEN 1 ELSE 0 END) AS promoters,
-      SUM(CASE WHEN rating <= 3 THEN 1 ELSE 0 END) AS needs_attention,
+      SUM(CASE WHEN rating >= ? THEN 1 ELSE 0 END) AS promoters,
+      SUM(CASE WHEN rating < ? THEN 1 ELSE 0 END) AS needs_attention,
       SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) AS resolved
     FROM feedbacks
     WHERE tenant_id = ? AND created_at >= ?
-  `).bind(auth.admin.tenant_id, since).first<{
+  `).bind(minRating, minRating, auth.admin.tenant_id, since).first<{
     total: number;
     average_rating: number | null;
     promoters: number | null;
@@ -298,8 +315,8 @@ async function adminFeedbackList(request: Request, env: Env): Promise<Response> 
   requireMethod(request, 'GET');
   const auth = await requireAdmin(request, env);
   const url = new URL(request.url);
-  const limit = Math.max(1, Math.min(Number(url.searchParams.get('limit') || '30'), 100));
-  const offset = Math.max(0, Number(url.searchParams.get('offset') || '0'));
+  const limit = intParam(url.searchParams.get('limit'), 30, 1, 100);
+  const offset = intParam(url.searchParams.get('offset'), 0, 0, Number.MAX_SAFE_INTEGER);
   const status = url.searchParams.get('status');
   const rating = url.searchParams.get('rating');
 
@@ -376,19 +393,24 @@ async function adminSettings(request: Request, env: Env): Promise<Response> {
     const body = await readJsonBody(request);
     const allowedKeys = new Set(['review_min_rating', 'google_review_url', 'tripadvisor_review_url', 'instagram_url', 'whatsapp_url', 'public_page_url', 'stable_qr_url', 'public_message', 'negative_message', 'questions']);
     const now = new Date().toISOString();
-    const changed: string[] = [];
 
-    for (const [key, value] of Object.entries(body)) {
-      if (!allowedKeys.has(key)) continue;
+    // Valida tudo antes de gravar e aplica em um único batch, para que uma
+    // chave inválida não deixe um conjunto parcial persistido.
+    const updates = Object.entries(body).filter(([key]) => allowedKeys.has(key));
+    for (const [key, value] of updates) {
       validateSetting(key, value);
-      await env.DB.prepare(`
+    }
+
+    if (updates.length > 0) {
+      const stmt = env.DB.prepare(`
         INSERT INTO settings (tenant_id, key, value_json, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?)
         ON CONFLICT(tenant_id, key) DO UPDATE SET value_json = excluded.value_json, updated_at = excluded.updated_at
-      `).bind(auth.admin.tenant_id, key, JSON.stringify(value), now, now).run();
-      changed.push(key);
+      `);
+      await env.DB.batch(updates.map(([key, value]) => stmt.bind(auth.admin.tenant_id, key, JSON.stringify(value), now, now)));
     }
 
+    const changed = updates.map(([key]) => key);
     await writeAudit(env, auth.admin.tenant_id, auth.admin.id, 'settings.update', { changed });
     return json({ ok: true, changed, settings: await getSettings(env, auth.admin.tenant_id) }, 200, request, env);
   }

@@ -8,9 +8,9 @@
 source "$(dirname "$0")/_common.sh"
 
 step "1/5 · Dependências"
-require_cmd node "Instale o Node.js 18+ (https://nodejs.org)."
+require_cmd node "Instale o Node.js 22+ (https://nodejs.org)."
 node_major="$(node -p 'process.versions.node.split(".")[0]')"
-[ "$node_major" -ge 18 ] || die "Node 18+ necessário (atual: $(node --version))."
+[ "$node_major" -ge 22 ] || die "Node 22+ necessário (atual: $(node --version))."
 ok "Node $(node --version)"
 
 step "2/5 · Variáveis locais (.dev.vars)"

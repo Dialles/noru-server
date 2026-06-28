@@ -66,7 +66,9 @@
 
     const data = await safeJson(res);
     if(res.status === 401){
-      showAuth();
+      // No próprio login, um 401 é "senha errada" — não recarrega a tela de
+      // auth (evita o flicker); o handler do formulário mostra a mensagem.
+      if(!path.startsWith('/admin/auth/login')) showAuth();
       throw new Error(data?.error?.message || 'Sessão expirada. Faça login novamente.');
     }
     if(!res.ok || data?.ok === false){
@@ -201,7 +203,7 @@
 
     $('#detailCreatedAt').textContent = formatDate(f.created_at);
     $('#detailCustomer').textContent = f.customer_name || 'Cliente sem nome';
-    $('#detailRating').textContent = `${f.rating}/5 ${stars(Number(f.rating || 0))}`;
+    $('#detailRating').textContent = `${Number(f.rating || 0)}/5 ${stars(Number(f.rating || 0))}`;
     $('#detailContact').textContent = [f.customer_phone, f.customer_email].filter(Boolean).join(' · ') || 'Sem contato autorizado';
     $('#detailOrigin').textContent = [f.table_code, scores.origem].filter(Boolean).join(' · ') || 'Página pública';
     $('#detailComment').textContent = f.comment || 'Sem comentário';
@@ -325,8 +327,14 @@
   async function saveRedirect(){
     const stable = normalizeOptionalUrl($('#stableUrl').value) || defaultPublicUrl();
     const target = normalizeOptionalUrl($('#targetUrl').value) || defaultPublicUrl();
-    state.historyItems.unshift({url: target, date: new Date().toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}), status:'Anterior'});
+    // Registra o destino anterior como "Anterior" só quando ele de fato mudou
+    // (o destino atual já é prefixado por renderHistory, evitando duplicar).
+    const previousTarget = absoluteUrl(state.settings.public_page_url || '');
+    if(previousTarget && previousTarget !== target){
+      state.historyItems.unshift({url: previousTarget, date: new Date().toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}), status:'Anterior'});
+    }
     await saveSettings({stable_qr_url: stable, public_page_url: target});
+    renderHistory();
   }
 
   function downloadQr(){
@@ -386,8 +394,8 @@
     $('#reloadSettingsBtn')?.addEventListener('click', () => loadSettings().then(() => toast('Configurações recarregadas.')).catch(err => toast(err.message)));
 
     $('#saveRedirectBtn')?.addEventListener('click', () => saveRedirect().catch(err => toast(err.message)));
-    $('#stableUrl')?.addEventListener('input', renderQr);
-    $('#targetUrl')?.addEventListener('input', renderQr);
+    $('#stableUrl')?.addEventListener('input', renderQrDebounced);
+    $('#targetUrl')?.addEventListener('input', renderQrDebounced);
     $('#copyStableBtn')?.addEventListener('click', async () => {
       try{ await navigator.clipboard.writeText($('#stableUrl').value.trim()); toast('Link fixo copiado.'); }
       catch(_){ toast('Não foi possível copiar automaticamente.'); }
@@ -477,6 +485,15 @@
   function escapeHtml(value){
     return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'}[char]));
   }
+
+  function debounce(fn, wait){
+    let timer;
+    return (...args) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), wait);
+    };
+  }
+  const renderQrDebounced = debounce(renderQr, 150);
 
   bindEvents();
   syncSidebarState();

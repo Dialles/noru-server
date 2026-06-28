@@ -22,18 +22,11 @@ export function json(data: unknown, status = 200, request?: Request, env?: Env, 
   return new Response(JSON.stringify(data, null, 2), { status, headers });
 }
 
-export function empty(status = 204, request?: Request, env?: Env, extraHeaders?: HeadersInit): Response {
-  const headers = new Headers(extraHeaders);
-  setSecurityHeaders(headers);
-  setCorsHeaders(headers, request, env);
-  return new Response(null, { status, headers });
-}
-
 export function options(request: Request, env: Env): Response {
   const headers = new Headers();
   setSecurityHeaders(headers);
   setCorsHeaders(headers, request, env);
-  headers.set('access-control-allow-methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+  headers.set('access-control-allow-methods', 'GET, POST, PATCH, OPTIONS');
   headers.set('access-control-allow-headers', 'content-type, authorization, x-setup-token');
   headers.set('access-control-max-age', '86400');
   return new Response(null, { status: 204, headers });
@@ -54,11 +47,18 @@ export async function readJsonBody<T extends JsonRecord = JsonRecord>(request: R
     throw new HttpError(415, 'unsupported_media_type', 'Envie o corpo da requisição em JSON.');
   }
 
+  let parsed: unknown;
   try {
-    return (await request.json()) as T;
+    parsed = await request.json();
   } catch {
     throw new HttpError(400, 'invalid_json', 'JSON inválido.');
   }
+
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new HttpError(400, 'invalid_json', 'O corpo da requisição deve ser um objeto JSON.');
+  }
+
+  return parsed as T;
 }
 
 export function requireMethod(request: Request, method: string): void {
